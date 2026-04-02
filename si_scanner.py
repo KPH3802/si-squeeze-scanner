@@ -233,9 +233,13 @@ def mark_emailed(conn, ticker, settlement_date):
 # ============================================================
 
 def build_email_subject(signals):
-    tickers = ', '.join(s['ticker'] for s in signals[:10])
-    if len(signals) > 10:
-        tickers += f' +{len(signals)-10} more'
+    # IB autotrader parses this subject - only SC tickers traded (strongest signal)
+    # Sort by change_percent DESC already done before this call
+    sc_signals = [s for s in signals if s.get('market_class') == 'SC']
+    trade_signals = sc_signals if sc_signals else signals
+    tickers = ', '.join(s['ticker'] for s in trade_signals[:10])
+    if len(trade_signals) > 10:
+        tickers += f' +{len(trade_signals)-10} more'
     return f'SI SQUEEZE: {tickers}'
 
 def build_email_html(signals, settlement_date, recent):
@@ -463,7 +467,9 @@ def run_scan(force=False, dry_run=False):
             new_signals.append(s)
     print(f'New signals (not previously seen): {len(new_signals)}')
 
-    # Step 6: Email
+    # Step 6: Sort signals by change_percent DESC (strongest first in subject/autotrader)
+    new_signals.sort(key=lambda x: -x['change_percent'])
+    # Step 7: Email
     recent = get_recent_signals(conn)
     email_sent = False
     if new_signals:
