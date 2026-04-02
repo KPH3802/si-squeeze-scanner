@@ -1,0 +1,8 @@
+config.py
+si_signals.db
+*.db
+*.csv
+*.xlsx
+__pycache__/
+*.pyc
+.DS_Store
