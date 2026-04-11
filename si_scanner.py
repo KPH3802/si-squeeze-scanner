@@ -56,6 +56,24 @@ MIN_PRICE        = config.MIN_PRICE          # Filter penny stocks
 TARGET_CLASSES   = set(config.TARGET_MARKET_CLASSES)
 EXCLUDE_CLASSES  = set(config.EXCLUDE_MARKET_CLASSES)
 
+# ---------------------------------------------------------------------------
+# Signal Intelligence — live logging
+# ---------------------------------------------------------------------------
+def log_signal_intelligence(scan_date, scanner, ticker, direction, fired,
+                             signal_strength=None, signal_bucket=None,
+                             regime_filter_passed=None, regime_value=None,
+                             score=None):
+    try:
+        import sqlite3 as _sl
+        db = os.path.expanduser('~/signal_intelligence.db')
+        c = _sl.connect(db)
+        c.execute('CREATE TABLE IF NOT EXISTS signal_log (id INTEGER PRIMARY KEY AUTOINCREMENT, scan_date TEXT, scanner TEXT, ticker TEXT, direction TEXT, fired INTEGER, signal_strength REAL, signal_bucket TEXT, regime_filter_passed INTEGER, regime_value REAL, score INTEGER, autotrader_acted INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP)')
+        c.execute('INSERT INTO signal_log (scan_date,scanner,ticker,direction,fired,signal_strength,signal_bucket,regime_filter_passed,regime_value,score) VALUES (?,?,?,?,?,?,?,?,?,?)',
+                  (scan_date,scanner,ticker,direction,fired,signal_strength,signal_bucket,regime_filter_passed,regime_value,score))
+        c.commit(); c.close()
+    except Exception:
+        pass
+
 # ============================================================
 # DATABASE
 # ============================================================
@@ -440,11 +458,27 @@ def run_scan(force=False, dry_run=False):
         if mkt_class not in TARGET_CLASSES:
             continue
 
+        # Bucket for logging
+        if chg_pct >= 200:
+            _bucket = '200+'
+        elif chg_pct >= 100:
+            _bucket = '100-200'
+        elif chg_pct >= 50:
+            _bucket = '50-100'
+        else:
+            _bucket = '30-50'
+
         # Price filter
         price = get_price(ticker)
         if price is not None and price < MIN_PRICE:
             print(f'  {ticker}: price ${price:.2f} < ${MIN_PRICE} -- skipped')
+            log_signal_intelligence(settlement_date, 'SI_SQUEEZE', ticker, 'BUY', 0,
+                                    signal_strength=chg_pct, signal_bucket=_bucket)
             continue
+
+        # Log fired signal
+        log_signal_intelligence(settlement_date, 'SI_SQUEEZE', ticker, 'BUY', 1,
+                                signal_strength=chg_pct, signal_bucket=_bucket)
 
         signals.append({
             'ticker':          ticker,
