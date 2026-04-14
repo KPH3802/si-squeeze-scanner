@@ -3,7 +3,7 @@
 
 DB_NAME = 'si_signals.db'
 CHANGE_THRESHOLD = 30.0
-MIN_PRICE        = 2.0
+MIN_PRICE        = 5.0
 TARGET_MARKET_CLASSES  = ['SC', 'NNM', 'NYSE', 'AMEX', 'ARCA', 'BZX']
 EXCLUDE_MARKET_CLASSES = ['OTC', 'OTCBB', 'OC', 'PI']
 EMAIL_SENDER    = 'sender@gmail.com'
